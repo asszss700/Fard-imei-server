@@ -1,0 +1,12 @@
+{
+  "name": "imei-server",
+  "version": "2.0.0",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "bcryptjs": "^2.4.3"
+  }
+}
