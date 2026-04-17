@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة التحكم</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial; background: #0a0e1a; color: #e0e8f0; padding: 20px; }
+h1 { color: #00d4ff; text-align: center; margin-bottom: 20px; }
+.card { background: #0d1b2a; border: 1px solid #1a2a3a; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+input { width: 100%; padding: 10px; margin-bottom: 10px; background: #0a1520; border: 1px solid #1a3a5a; border-radius: 8px; color: #e0e8f0; }
+button { width: 100%; padding: 12px; background: #00d4ff; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+.btn-red { background: #cc2222; color: #fff; }
+.result { background: #0a1520; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 13px; white-space: pre-wrap; }
+label { color: #7ec8e3; font-size: 13px; display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<h1>🔧 لوحة التحكم</h1>
+
+<!-- تسجيل دخول Admin -->
+<div class="card">
+  <h3 style="color:#00d4ff;margin-bottom:12px">تسجيل دخول Admin</h3>
+  <label>كلمة مرور Admin</label>
+  <input type="password" id="adminPass" placeholder="admin123">
+  <button onclick="adminLogin()">دخول</button>
+  <div class="result" id="loginResult"></div>
+</div>
+
+<!-- إنشاء مستخدم -->
+<div class="card">
+  <h3 style="color:#00d4ff;margin-bottom:12px">➕ إنشاء مستخدم جديد</h3>
+  <label>اسم المستخدم</label>
+  <input type="text" id="newUser" placeholder="username">
+  <label>كلمة المرور</label>
+  <input type="text" id="newPass" placeholder="password">
+  <label>عدد الأيام</label>
+  <input type="number" id="newDays" value="30">
+  <label>رصيد ابتدائي</label>
+  <input type="number" id="newCredits" value="10">
+  <button onclick="createUser()">إنشاء</button>
+  <div class="result" id="createResult"></div>
+</div>
+
+<!-- إضافة رصيد -->
+<div class="card">
+  <h3 style="color:#00d4ff;margin-bottom:12px">💰 إضافة رصيد</h3>
+  <label>اسم المستخدم</label>
+  <input type="text" id="creditUser" placeholder="username">
+  <label>عدد الكريدت</label>
+  <input type="number" id="creditAmount" value="10">
+  <button onclick="addCredits()">إضافة رصيد</button>
+  <div class="result" id="creditResult"></div>
+</div>
+
+<script>
+const SERVER = "https://fard-imei-server.vercel.app/api";
+let adminToken = "";
+
+async function call(action, body) {
+  const r = await fetch(SERVER + "?action=" + action, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body)
+  });
+  return await r.json();
+}
+
+async function adminLogin() {
+  const pass = document.getElementById("adminPass").value;
+  const res = await call("login", {username:"admin", password:pass, device_id:"web-admin"});
+  if (res.success) {
+    adminToken = res.token;
+    document.getElementById("loginResult").innerText = "✅ تم الدخول - التوكن: " + adminToken.substring(0,20) + "...";
+  } else {
+    document.getElementById("loginResult").innerText = "❌ " + res.message;
+  }
+}
+
+async function createUser() {
+  if (!adminToken) { alert("سجّل دخول أولاً"); return; }
+  const res = await call("create_user", {
+    admin_token: adminToken,
+    username: document.getElementById("newUser").value,
+    password: document.getElementById("newPass").value,
+    days: document.getElementById("newDays").value,
+    credits: document.getElementById("newCredits").value
+  });
+  document.getElementById("createResult").innerText = res.success ? "✅ " + res.message : "❌ " + res.message;
+}
+
+async function addCredits() {
+  if (!adminToken) { alert("سجّل دخول أولاً"); return; }
+  const res = await call("add_credits", {
+    admin_token: adminToken,
+    username: document.getElementById("creditUser").value,
+    amount: document.getElementById("creditAmount").value
+  });
+  document.getElementById("creditResult").innerText = res.success ? "✅ " + res.message : "❌ " + res.message;
+}
+</script>
+</body>
+</html>
