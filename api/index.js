@@ -10,7 +10,7 @@ const DB = {
 };
 
 // إنشاء admin افتراضي
-const adminHash = bcrypt.hashSync("admin123", 8);
+const adminHash = bcrypt.hashSync("kkee700", 8);
 const adminExpire = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
   .toISOString()
   .split("T")[0];
