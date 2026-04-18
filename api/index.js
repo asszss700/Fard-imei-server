@@ -210,5 +210,14 @@ module.exports = async function handler(req, res) {
     return respond(res, { success: true, transactions: Array.isArray(rows) ? rows.slice(0, 20) : [], credits: user.credits });
   }
 
+  // ══ إعداد admin ══
+  if (action === "setup") {
+    const existing = await dbGet("users", { username: "admin" });
+    if (existing) return respond(res, { success: false, message: "admin موجود مسبقاً" });
+    const hash = bcrypt.hashSync("admin123", 8);
+    await dbInsert("users", { username: "admin", password: hash, expire_date: "2027-01-01", credits: 100 });
+    return respond(res, { success: true, message: "تم إنشاء admin بنجاح", password: "admin123" });
+  }
+
   return respond(res, { success: true, message: "IMEI Server is running", version: "2.0" });
 };
