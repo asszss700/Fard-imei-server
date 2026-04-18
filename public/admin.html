@@ -131,6 +131,34 @@ async function deleteUser() {
   });
   document.getElementById("delResult").innerText = res.success ? "✅ " + res.message : "❌ " + res.message;
 }
+async function listUsers() {
+  if (!adminToken) { alert("سجّل دخول أولاً"); return; }
+  const res = await call("list_users", { admin_token: adminToken });
+  if (!res.success) {
+    document.getElementById("usersTable").innerHTML = "<div class='result'>❌ " + res.message + "</div>";
+    return;
+  }
+  let html = "<table style='width:100%;border-collapse:collapse;margin-top:10px;font-size:13px'>";
+  html += "<tr style='background:#1a2a3a'><th style='padding:8px;text-align:right'>المستخدم</th><th style='padding:8px'>الرصيد</th><th style='padding:8px'>الصلاحية</th><th style='padding:8px'>الحالة</th></tr>";
+  res.users.forEach(u => {
+    const status = u.active ? "<span style='color:#66ff99'>✓ نشط</span>" : "<span style='color:#ff4444'>✗ منتهي</span>";
+    html += "<tr style='border-bottom:1px solid #1a2a3a'>";
+    html += "<td style='padding:8px'>" + u.username + "</td>";
+    html += "<td style='padding:8px;text-align:center;color:#00d4ff'>" + u.credits + "</td>";
+    html += "<td style='padding:8px;text-align:center'>" + u.expire_date + "</td>";
+    html += "<td style='padding:8px;text-align:center'>" + status + "</td>";
+    html += "</tr>";
+  });
+  html += "</table>";
+  document.getElementById("usersTable").innerHTML = html;
+}
 </script>
+<!-- عرض المستخدمين -->
+<div class="card">
+  <h3 style="color:#00d4ff">👥 عرض جميع المستخدمين</h3>
+  <button onclick="listUsers()">تحديث القائمة</button>
+  <div id="usersTable"></div>
+</div>
+
 </body>
 </html>
