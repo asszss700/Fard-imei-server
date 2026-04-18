@@ -10,7 +10,7 @@ const DB = {
 };
 
 // إنشاء admin افتراضي
-const adminHash = bcrypt.hashSync("kkee700", 8);
+const adminHash = bcrypt.hashSync("admin123", 8);
 const adminExpire = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
   .toISOString()
   .split("T")[0];
@@ -189,6 +189,23 @@ module.exports = async function handler(req, res) {
   if (action === "logout") {
     if (input.token && DB.tokens[input.token]) delete DB.tokens[input.token];
     return respond(res, { success: true, message: "تم تسجيل الخروج" });
+  }
+
+  // ══ حذف مستخدم ══
+  if (action === "delete_user") {
+    const { admin_token, username } = input;
+    const tok = DB.tokens[admin_token];
+    if (!tok || tok.username !== "admin")
+      return respond(res, { success: false, message: "غير مصرح" });
+    if (username === "admin")
+      return respond(res, { success: false, message: "لا يمكن حذف admin" });
+    if (!DB.users[username])
+      return respond(res, { success: false, message: "المستخدم غير موجود" });
+    Object.keys(DB.tokens).forEach(t => {
+      if (DB.tokens[t].username === username) delete DB.tokens[t];
+    });
+    delete DB.users[username];
+    return respond(res, { success: true, message: "تم حذف " + username });
   }
 
   // الصفحة الرئيسية
