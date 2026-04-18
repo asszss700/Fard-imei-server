@@ -208,6 +208,20 @@ module.exports = async function handler(req, res) {
     return respond(res, { success: true, message: "تم حذف " + username });
   }
 
+  // ══ عرض المستخدمين ══
+  if (action === "list_users") {
+    const tok = DB.tokens[input.admin_token];
+    if (!tok || tok.username !== "admin")
+      return respond(res, { success: false, message: "غير مصرح" });
+    const users = Object.values(DB.users).map(u => ({
+      username: u.username,
+      expire_date: u.expire_date,
+      credits: u.credits,
+      active: new Date(u.expire_date) > new Date()
+    }));
+    return respond(res, { success: true, users });
+  }
+
   // الصفحة الرئيسية
   return respond(res, {
     success: true,
