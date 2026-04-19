@@ -210,6 +210,41 @@ module.exports = async function handler(req, res) {
     return respond(res, { success: true, transactions: Array.isArray(rows) ? rows.slice(0, 20) : [], credits: user.credits });
   }
 
+  // ══ فحص Fard عبر السيرفر ══
+  if (action === "check_fard") {
+    const user = await getAuthUser(input.token, input.device_id);
+    if (!user) return respond(res, { success: false, message: "غير مصرح" });
+
+    const imei = input.imei || "";
+    const csc  = input.csc  || "KSA";
+    if (!imei) return respond(res, { success: false, message: "أدخل IMEI" });
+
+    const price = SERVICE_PRICES["check_fard"];
+    if (user.credits < price)
+      return respond(res, { success: false, message: "رصيدك غير كافٍ", credits: user.credits, required: price });
+
+    // استدعاء API الفحص الحقيقي
+    let fardResult = null;
+    try {
+      const apiRes = await fetch(`https://api.tdunlock.net/check_sam.php?imei=${imei}&csc=${csc}`);
+      fardResult = await apiRes.text();
+    } catch (e) {
+      return respond(res, { success: false, message: "فشل الاتصال بـ API الفحص" });
+    }
+
+    // خصم الرصيد فقط بعد نجاح الفحص
+    await dbUpdate("users", { username: user.username }, { credits: user.credits - price });
+    await dbInsert("transactions", { username: user.username, amount: -price, type: "deduct", description: "check_fard" });
+
+    return respond(res, {
+      success: true,
+      result: fardResult,
+      credits: user.credits - price,
+      deducted: price,
+      message: "تم الفحص بنجاح"
+    });
+  }
+
   // ══ إعداد admin ══
   if (action === "setup") {
     const existing = await dbGet("users", { username: "admin" });
