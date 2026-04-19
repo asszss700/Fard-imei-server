@@ -226,20 +226,6 @@ module.exports = async function handler(req, res) {
     return respond(res, { success: true, users });
   }
 
-  // ══ تغيير بيانات admin (مؤقت - احذفه بعد الاستخدام) ══
-  if (action === "reset_admin") {
-    const newPass = input.password;
-    const newUser = input.new_username || "admin";
-    if (!newPass) return respond(res, { success: false, message: "أدخل كلمة مرور" });
-    const newHash = bcrypt.hashSync(newPass, 8);
-    await db.collection("users").updateOne(
-      { username: "admin" },
-      { $set: { password: newHash, username: newUser } }
-    );
-    await db.collection("tokens").deleteMany({ username: "admin" });
-    return respond(res, { success: true, message: "تم تغيير البيانات: " + newUser });
-  }
-
   // الصفحة الرئيسية
   return respond(res, {
     success: true,
