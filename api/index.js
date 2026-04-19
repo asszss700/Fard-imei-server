@@ -71,9 +71,19 @@ module.exports = async function handler(req, res) {
       return respond(res, { success:false, message:"انتهت صلاحية الحساب" });
     if (username === "admin" && device_id !== "web-admin")
       return respond(res, { success:false, message:"اسم المستخدم أو كلمة المرور خاطئة" });
-    const existing = await db.collection("tokens").findOne({ username });
-    if (existing && existing.device_id !== device_id && username !== "admin")
-      return respond(res, { success:false, message:"هذا الحساب مسجّل على جهاز آخر" });
+    if (username !== "admin") {
+      const existing = await db.collection("tokens").findOne({ username });
+      if (existing && existing.device_id !== device_id) {
+        const lockDays = user.device_lock_days || 30;
+        const lockedUntil = user.device_locked_until ? new Date(user.device_locked_until) : null;
+        if (lockedUntil && new Date() < lockedUntil) {
+          const remaining = Math.ceil((lockedUntil - new Date()) / (1000*60*60*24));
+          return respond(res, { success:false, message:`الحساب مقيّد بجهاز آخر — يمكن تغييره بعد ${remaining} يوم` });
+        }
+        const newLockedUntil = new Date(Date.now() + lockDays*24*60*60*1000).toISOString();
+        await db.collection("users").updateOne({ username }, { $set: { device_locked_until: newLockedUntil } });
+      }
+    }
     await db.collection("tokens").deleteMany({ username });
     const token = crypto.randomBytes(32).toString("hex");
     await db.collection("tokens").insertOne({ token, username, device_id });
@@ -158,14 +168,36 @@ module.exports = async function handler(req, res) {
     return respond(res, { success:true, message:"تم تسجيل الخروج" });
   }
 
-  // ══ تغيير بيانات admin (مؤقت) ══
-  if (action === "reset_admin") {
-    if (!input.password) return respond(res, { success:false, message:"أدخل كلمة مرور" });
-    const newHash = bcrypt.hashSync(input.password, 8);
-    const newUser = input.new_username || "admin";
-    await db.collection("users").updateOne({ username:"admin" }, { $set:{ password:newHash, username:newUser } });
-    await db.collection("tokens").deleteMany({ username:"admin" });
-    return respond(res, { success:true, message:"تم التحديث: " + newUser });
+
+
+  return respond(res, { success:true, message:"IMEI Server is running", version:"3.0" });
+};
+
+  // ══ تحديث مدة قفل الجهاز (admin) ══
+  if (action === "set_device_lock") {
+    if (!await isAdmin(db, input.admin_token)) return respond(res, { success:false, message:"غير مصرح" });
+    const lockDays = parseInt(input.lock_days);
+    if (!input.username || isNaN(lockDays) || lockDays < 0)
+      return respond(res, { success:false, message:"بيانات ناقصة" });
+    const target = await db.collection("users").findOne({ username: input.username });
+    if (!target) return respond(res, { success:false, message:"المستخدم غير موجود" });
+    await db.collection("users").updateOne(
+      { username: input.username },
+      { $set: { device_lock_days: lockDays, device_locked_until: null } }
+    );
+    return respond(res, { success:true, message:`تم تعيين مدة القفل ${lockDays} يوم للمستخدم ${input.username}` });
+  }
+
+  // ══ فك قفل الجهاز يدوياً (admin) ══
+  if (action === "unlock_device") {
+    if (!await isAdmin(db, input.admin_token)) return respond(res, { success:false, message:"غير مصرح" });
+    if (!input.username) return respond(res, { success:false, message:"بيانات ناقصة" });
+    await db.collection("users").updateOne(
+      { username: input.username },
+      { $set: { device_locked_until: null }, $unset: { device_lock_days: "" } }
+    );
+    await db.collection("tokens").deleteMany({ username: input.username });
+    return respond(res, { success:true, message:`تم فك قفل الجهاز للمستخدم ${input.username}` });
   }
 
   return respond(res, { success:true, message:"IMEI Server is running", version:"3.0" });
