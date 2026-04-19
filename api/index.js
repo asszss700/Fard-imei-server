@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
     if (new Date(user.expire_date) < new Date())
       return respond(res, { success:false, message:"انتهت صلاحية الحساب" });
     if (username === "admin" && device_id !== "web-admin")
-      return respond(res, { success:false, message:"هذا الحساب مخصص للوحة التحكم فقط" });
+      return respond(res, { success:false, message:"اسم المستخدم أو كلمة المرور خاطئة" });
     const existing = await db.collection("tokens").findOne({ username });
     if (existing && existing.device_id !== device_id && username !== "admin")
       return respond(res, { success:false, message:"هذا الحساب مسجّل على جهاز آخر" });
